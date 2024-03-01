@@ -1,4 +1,4 @@
 # INA226-Sensor-Driver
 
-Set the I2C module in the top design to be INA226_I2C
+Set the I2C module in the top design to be I2C_INA226
 

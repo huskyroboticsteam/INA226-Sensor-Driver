@@ -17,7 +17,7 @@
 
 uint8_t init_INA226()
 {
-    INA226_I2C_Start();
+    I2C_INA226_Start();
     reset();
     setShuntResistor(100);
     return ping();
@@ -170,32 +170,32 @@ uint8_t getPower(uint8_t *p)
 // Returns the value of the selected internal register
 uint8_t readRegister(uint8_t reg, uint8_t *output, uint8_t cnt)
 {
-    INA226_I2C_I2CMasterClearStatus(); //clear the garbage
+    I2C_INA226_I2CMasterClearStatus(); //clear the garbage
 
     int ms_timeout = 20;
     uint32_t error = 0; // this is the "status" we usually use in our R/W functions
 	uint8_t idx;
-	error = INA226_I2C_I2CMasterSendStart(DEVICE_ADDR, INA226_I2C_I2C_WRITE_XFER_MODE, ms_timeout);
+	error = I2C_INA226_I2CMasterSendStart(DEVICE_ADDR, I2C_INA226_I2C_WRITE_XFER_MODE, ms_timeout);
 	
-	error = INA226_I2C_I2CMasterWriteByte(reg, ms_timeout);
+	error = I2C_INA226_I2CMasterWriteByte(reg, ms_timeout);
 	
-	error = INA226_I2C_I2CMasterSendStop(ms_timeout);
+	error = I2C_INA226_I2CMasterSendStop(ms_timeout);
 	
-	error = INA226_I2C_I2CMasterSendStart(DEVICE_ADDR, INA226_I2C_I2C_READ_XFER_MODE, ms_timeout);
+	error = I2C_INA226_I2CMasterSendStart(DEVICE_ADDR, I2C_INA226_I2C_READ_XFER_MODE, ms_timeout);
     //PrintInt(BNO055_iERROR);
 	for (idx = 0; (idx < cnt) && (error == 0); idx++)
 	{
         if (idx < cnt-1)
         {
-		    INA226_I2C_I2CMasterReadByte(INA226_I2C_I2C_ACK_DATA, &output[idx], ms_timeout);
+		    I2C_INA226_I2CMasterReadByte(I2C_INA226_I2C_ACK_DATA, &output[idx], ms_timeout);
         }
         else
         {
-            INA226_I2C_I2CMasterReadByte(INA226_I2C_I2C_NAK_DATA, &output[idx], ms_timeout);
+            I2C_INA226_I2CMasterReadByte(I2C_INA226_I2C_NAK_DATA, &output[idx], ms_timeout);
         }
 	}
 	// Check for BNO055_iERROR before proceeding
-	error = INA226_I2C_I2CMasterSendStop(ms_timeout);
+	error = I2C_INA226_I2CMasterSendStop(ms_timeout);
 
 	return (uint8_t)error;
 }
@@ -204,14 +204,14 @@ uint8_t readRegister(uint8_t reg, uint8_t *output, uint8_t cnt)
 uint8_t writeRegister(uint8_t reg, uint8_t *data, uint8_t cnt)
 {
     
-    INA226_I2C_I2CMasterClearStatus(); //clear the garbage
+    I2C_INA226_I2CMasterClearStatus(); //clear the garbage
     uint8_t data_pack[cnt + 1];
     data_pack[0] = reg;
     data_pack[1] = data[0];
     data_pack[2] = data[1];
     
-    int status = INA226_I2C_I2CMasterWriteBuf(DEVICE_ADDR, data_pack, cnt, INA226_I2C_I2C_MODE_COMPLETE_XFER);
-    while ((INA226_I2C_I2CMasterStatus() & INA226_I2C_I2C_MSTAT_WR_CMPLT) == 0u) //should wait for write buffer to complete
+    int status = I2C_INA226_I2CMasterWriteBuf(DEVICE_ADDR, data_pack, cnt, I2C_INA226_I2C_MODE_COMPLETE_XFER);
+    while ((I2C_INA226_I2CMasterStatus() & I2C_INA226_I2C_MSTAT_WR_CMPLT) == 0u) //should wait for write buffer to complete
     {
         Print("\r\nWRITE TO: \n\r");
         PrintInt(reg);
