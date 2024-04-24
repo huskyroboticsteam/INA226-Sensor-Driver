@@ -40,26 +40,28 @@
 char debugOutput[32];
 
  
-uint8_t address;
+uint8 address;
 
-uint8_t reset();
-uint8_t ping();
+uint8 reset();
+uint8 ping();
 
-uint8_t init_INA226();
+uint8 init_INA226();
 
 // configure the device
-uint8_t setShuntResistor(uint8_t);
-uint8_t setAlertLimitBusVoltage(uint8_t);
-uint8_t setAlertEnableBusUnderVoltage();
+uint8 setShuntResistor(uint8);
+uint8 setAlertLimitBusVoltage(uint8);
+uint8 setAlertEnableBusUnderVoltage();
 
 
 // functions used to retrieve the measurements from the device
-uint8_t getShuntVoltage(uint8_t*);
-uint8_t getVoltage(uint8_t*);
-uint8_t getCurrent(uint8_t*);
-uint8_t getPower(uint8_t*);
+uint8 getShuntVoltage(uint16*);
+uint8 getVoltage(uint16*);
+uint8 getCurrent(uint16*);
+uint8 getPower(uint16*);
 
 
 // only for use
-uint8_t readRegister(uint8_t, uint8_t*, uint8_t);
-uint8_t writeRegister(uint8_t, uint8_t*, uint8_t);
+uint8 readReg16(uint8 reg, uint16* val);
+uint8 writeReg16(uint8 reg, uint16 val);
+uint32 readRegister(uint8 reg, uint8 *output, uint8 cnt);
+uint32 writeRegister(uint8_t reg, uint8_t *data, uint8_t cnt);

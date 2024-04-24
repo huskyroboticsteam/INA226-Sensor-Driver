@@ -12,7 +12,7 @@ int main(void)
     
     Print("\r\nINITIALIZING\n\r");
     
-    uint8_t voltage[2], current[2], power[2];  // the data bois
+    uint16 voltage, current, power;  // the data bois
 
     for(;;)
     {
@@ -21,15 +21,15 @@ int main(void)
         getPower(power);
         
         Print("Voltage: ");
-        PrintInt((voltage[0] << 8) + voltage[1]);
+        PrintInt(voltage);
         Print("\n\r");
         
         Print("Current: ");
-        PrintInt((current[0] << 8) + current[1]);
+        PrintInt(current);
         Print("\n\r");
         
         Print("Power: ");
-        PrintInt((power[0] << 8) + power[1]);
+        PrintInt(power);
         Print("\n\r\n\r");
         
         CyDelay(5000);

@@ -12,12 +12,14 @@
  *
  */
 
-#include <INA226.h>
+#include "INA226.h"
+#include <math.h>
 
+#define TIMEOUT 20
 
 uint8_t init_INA226()
 {
-    I2C_INA226_Start();
+    INA226_I2C_Start();
     reset();
     setShuntResistor(100);
     return ping();
@@ -30,12 +32,8 @@ uint8_t init_INA226()
  *   unsigned char         0 succes
  *                         1 fail
  */
-uint8_t reset()
-{
-   uint8_t data[2];
-   data[0] = (INA226_RESET) >> 8;
-   data[1] = 0;  //INA226_RESET;
-   return writeRegister(INA226_REG_CONFIG, data, 2);
+uint8_t reset() {
+   return writeReg16(INA226_REG_CONFIG, INA226_RESET);
 }
 
 /**
@@ -45,11 +43,11 @@ uint8_t reset()
  *   unsigned char         1 device found
  *                         0 device not found
  */
-uint8_t ping()
-{
-    uint8_t id[2];
-    readRegister(INA226_REG_ID, id, 2);
-    return ((id[0] << 8) + id[1]);
+uint8_t ping() {
+    uint16 id;
+    uint8 ret = readReg16(INA226_REG_ID, &id);
+    if (ret) id = 0;
+    return id;
 }
 
 /**
@@ -62,12 +60,9 @@ uint8_t ping()
  *   unsigned char         0 success
  *                         1 fail
  */
-uint8_t setShuntResistor(uint8_t shunt)
-{
-    uint8_t data[2];
-    data[0] = (INA226_CALIBRATION_REF / shunt) >> 8;
-    data[1] = INA226_CALIBRATION_REF / shunt;
-    return writeRegister(INA226_REG_CALIBRATION, data, 2);
+uint8_t setShuntResistor(uint8 rShunt)
+{    
+    return writeReg16(INA226_REG_CALIBRATION, INA226_CALIBRATION_REF / rShunt);
 }
 
 uint8_t setAlertLimitBusVoltage(uint8_t limit)
@@ -84,6 +79,7 @@ uint8_t setAlertEnableBusUnderVoltage()
     data[1] = 0;  //INA226_BIT_BUL;
     return writeRegister(INA226_REG_MASKENABLE, data, 2);
 }
+
 /**
  *   Returns the bus voltage in mV
  *
@@ -94,15 +90,11 @@ uint8_t setAlertEnableBusUnderVoltage()
  *   unsigned char         0 success
  *                         1 fail
  */
-uint8_t getVoltage(uint8_t *v)
+uint8 getVoltage(uint16* v)
 {
-    uint8_t ret = readRegister(INA226_REG_BUSVOLTAGE, v, 2);
-    *v = *v + (*v >> 2);
-    if (ret)
-    {
-        *v = 0;
-    }
-    return ret;
+    uint8 res = readReg16(INA226_REG_BUSVOLTAGE, v);
+    *v += (*v >> 2); // x1.25, cuz LSB = 1.25mV
+    return res;
 }
 
 /**
@@ -115,14 +107,9 @@ uint8_t getVoltage(uint8_t *v)
  *   unsigned char         0 success
  *                         1 fail
  */
-uint8_t getShuntVoltage(uint8_t *v)
-{
-    uint8_t ret = readRegister(INA226_REG_SHUNTVOLTAGE, v, 2);
-    if (ret)
-    {
-        *v = 0;
-    }
-    return ret;
+uint8 getShuntVoltage(uint16 *v)
+{    
+    return readReg16(INA226_REG_SHUNTVOLTAGE, v);
 }
 
 /**
@@ -135,15 +122,9 @@ uint8_t getShuntVoltage(uint8_t *v)
  *   unsigned char         0 success
  *                         1 fail
  */
-uint8_t getCurrent(uint8_t *c)
+uint8 getCurrent(uint16 *c)
 {
-    uint8_t ret = readRegister(INA226_REG_CURRENT, c, 2);
-    *c/=8;
-    if (ret)
-    {
-        *c = 0;
-    }
-    return ret;
+    return readReg16(INA226_REG_CURRENT, c);
 }
 
 /**
@@ -156,65 +137,40 @@ uint8_t getCurrent(uint8_t *c)
  *   unsigned char         0 success
  *                         1 fail
  */
-uint8_t getPower(uint8_t *p)
+uint8 getPower(uint16* p)
 {
-    uint8_t ret = readRegister(INA226_REG_POWER, p, 2);
-    *p = (*p * 3) + (*p >> 3);
-    if (ret)
-    {
-        *p = 0;
-    }
-    return ret;
+    return readReg16(INA226_REG_POWER, p);
+    // *p = (*p * 3) + (*p >> 3); lol   
 }
 
-// Returns the value of the selected internal register
-uint8_t readRegister(uint8_t reg, uint8_t *output, uint8_t cnt)
-{
-    I2C_INA226_I2CMasterClearStatus(); //clear the garbage
+uint8 readReg16(uint8 reg, uint16* val) {
+    uint8 b1, b2;
+    INA226_I2C_I2CMasterClearStatus(); //clear the garbage
 
-    int ms_timeout = 20;
-    uint32_t error = 0; // this is the "status" we usually use in our R/W functions
-	uint8_t idx;
-	error = I2C_INA226_I2CMasterSendStart(DEVICE_ADDR, I2C_INA226_I2C_WRITE_XFER_MODE, ms_timeout);
+	INA226_I2C_I2CMasterSendStart(DEVICE_ADDR, INA226_I2C_I2C_WRITE_XFER_MODE, TIMEOUT);
+	INA226_I2C_I2CMasterWriteByte(reg, TIMEOUT);
+	INA226_I2C_I2CMasterSendStop(TIMEOUT);
 	
-	error = I2C_INA226_I2CMasterWriteByte(reg, ms_timeout);
-	
-	error = I2C_INA226_I2CMasterSendStop(ms_timeout);
-	
-	error = I2C_INA226_I2CMasterSendStart(DEVICE_ADDR, I2C_INA226_I2C_READ_XFER_MODE, ms_timeout);
-    //PrintInt(BNO055_iERROR);
-	for (idx = 0; (idx < cnt) && (error == 0); idx++)
-	{
-        if (idx < cnt-1)
-        {
-		    I2C_INA226_I2CMasterReadByte(I2C_INA226_I2C_ACK_DATA, &output[idx], ms_timeout);
-        }
-        else
-        {
-            I2C_INA226_I2CMasterReadByte(I2C_INA226_I2C_NAK_DATA, &output[idx], ms_timeout);
-        }
-	}
-	// Check for BNO055_iERROR before proceeding
-	error = I2C_INA226_I2CMasterSendStop(ms_timeout);
-
-	return (uint8_t)error;
+	INA226_I2C_I2CMasterSendStart(DEVICE_ADDR, INA226_I2C_I2C_READ_XFER_MODE, TIMEOUT);
+	INA226_I2C_I2CMasterReadByte(INA226_I2C_I2C_ACK_DATA, &b2, TIMEOUT);
+    INA226_I2C_I2CMasterReadByte(INA226_I2C_I2C_NAK_DATA, &b1, TIMEOUT);
+    
+    int err = INA226_I2C_I2CMasterSendStop(TIMEOUT);
+    *val = ((uint16) b2 << 8) | b1;
+	return err;
 }
 
-//Sets the value of the selected internal register
-uint8_t writeRegister(uint8_t reg, uint8_t *data, uint8_t cnt)
-{
+uint8 writeReg16(uint8 reg, uint16 val) {
+    uint8 b1, b2;
+    b1 = val & 0xFF;
+    b2 = val >> 8;
+    INA226_I2C_I2CMasterClearStatus(); //clear the garbage
     
-    I2C_INA226_I2CMasterClearStatus(); //clear the garbage
-    uint8_t data_pack[cnt + 1];
-    data_pack[0] = reg;
-    data_pack[1] = data[0];
-    data_pack[2] = data[1];
+    INA226_I2C_I2CMasterSendStart(DEVICE_ADDR, INA226_I2C_I2C_WRITE_XFER_MODE, TIMEOUT);
+	INA226_I2C_I2CMasterWriteByte(reg, TIMEOUT);
     
-    int status = I2C_INA226_I2CMasterWriteBuf(DEVICE_ADDR, data_pack, cnt, I2C_INA226_I2C_MODE_COMPLETE_XFER);
-    while ((I2C_INA226_I2CMasterStatus() & I2C_INA226_I2C_MSTAT_WR_CMPLT) == 0u) //should wait for write buffer to complete
-    {
-        Print("\r\nWRITE TO: \n\r");
-        PrintInt(reg);
-    }
-	return status;  
+    INA226_I2C_I2CMasterWriteByte(b2, TIMEOUT);
+    INA226_I2C_I2CMasterWriteByte(b1, TIMEOUT);
+    
+    return INA226_I2C_I2CMasterSendStop(TIMEOUT);
 }
